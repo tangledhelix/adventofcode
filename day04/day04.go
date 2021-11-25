@@ -242,8 +242,7 @@ func validatePassport(record passport) bool {
 	reHeight := regexp.MustCompile(`^(?P<Value>\d+)(?P<Unit>cm|in)$`)
 	matches := reHeight.FindStringSubmatch(record.hgt)
 	if len(matches) == 3 {
-		measurement := 0
-		fmt.Sscanf(matches[1], "%d", &measurement)
+		measurement := convertStringToNumber(matches[1])
 		if matches[2] == "cm" {
 			if measurement < 150 || measurement > 193 {
 				return false
