@@ -55,6 +55,19 @@
  *
  * As a sanity check, look through your list of boarding passes. What is the
  * highest seat ID on a boarding pass?
+ *
+ * --- Part Two ---
+ * Ding! The "fasten seat belt" signs have turned on. Time to find your seat.
+ *
+ * It's a completely full flight, so your seat should be the only missing
+ * boarding pass in your list. However, there's a catch: some of the seats at
+ * the very front and back of the plane don't exist on this aircraft, so they'll
+ * be missing from your list as well.
+ *
+ * Your seat wasn't at the very front or back, though; the seats with IDs +1 and
+ * -1 from yours will be in your list.
+ *
+ * What is the ID of your seat?
  */
 
 package main
@@ -90,6 +103,7 @@ type gridSpec struct {
 
 func findRowOrCol(seatLocator string, highBound int, lowLetter string, highLetter string) int {
 	lowBound := 0
+	highBound--
 
 	for _, c := range seatLocator {
 		// Find the difference between the current bounds and divide the space in half.
@@ -107,12 +121,12 @@ func findRowOrCol(seatLocator string, highBound int, lowLetter string, highLette
 			if diff == 1 {
 				return highBound
 			}
-			lowBound = highBound - diff
+			lowBound = highBound - diff + 1
 		}
 
 	}
 
-	// We shouldn't ever get here
+	// We should never get here
 	return -1
 }
 
@@ -135,10 +149,11 @@ func calculateSeatId(row, col int) int {
 }
 
 // Process a single seat, populating its metadata in seatList
-func processSeat(entryNumber int, seatLocator string, s *seat, grid gridSpec) {
+func processSeat(entryNumber int, seatLocator string, s *seat, grid gridSpec, seatMap *[128][8]bool) {
 	if seatLocator != "" {
 		s.locationCode = seatLocator
 		s.row, s.col = findSeatLocation(seatLocator, grid)
+		seatMap[s.row][s.col] = true
 		s.id = calculateSeatId(s.row, s.col)
 	}
 }
@@ -156,9 +171,36 @@ func findHighestSeatId(seatList *[1000]seat) int {
 	return highest
 }
 
+func printSeatMap(seatMap *[128][8]bool) {
+	for row := 0; row < len(seatMap); row++ {
+		for col := 0; col < len(seatMap[row]); col++ {
+			if seatMap[row][col] {
+				fmt.Print("x")
+			} else {
+				fmt.Print(".")
+			}
+		}
+		fmt.Printf("  %03d\n", row)
+	}
+}
+
+func findMySeatId(seatMap *[128][8]bool) int {
+	for row := 0; row < len(seatMap); row++ {
+		for col := 0; col < len(seatMap[row]); col++ {
+			if col != len(seatMap[row])-1 {
+				if !seatMap[row][col] && seatMap[row][col+1] && seatMap[row][col-1] {
+					return calculateSeatId(row, col)
+				}
+			}
+		}
+	}
+	return -1
+}
+
 func main() {
 	var seatList [1000]seat
 	grid := gridSpec{rows: 128, cols: 8}
+	var seatMap [128][8]bool
 
 	// Read input file and break into lines
 	dat, err := os.ReadFile("input.txt")
@@ -166,8 +208,11 @@ func main() {
 	rawData := strings.Split(string(dat), "\n")
 
 	for i := 0; i < len(rawData); i++ {
-		processSeat(i, string(rawData[i]), &seatList[i], grid)
+		processSeat(i, string(rawData[i]), &seatList[i], grid, &seatMap)
 	}
+
+	// Show a literal map of the plane so we can spot our seat.
+	// printSeatMap(&seatMap)
 
 	// Once seatList has been filled with the appropriate
 	// data, iterate over every boarding pass to find the highest
@@ -175,4 +220,7 @@ func main() {
 	highestSeatId := findHighestSeatId(&seatList)
 	fmt.Println("Highest seat ID:", highestSeatId)
 
+	// Show us our own seat
+	mySeatId := findMySeatId(&seatMap)
+	fmt.Println("My seat ID:", mySeatId)
 }
